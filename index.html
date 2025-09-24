@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Renewable Energy Dashboard</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --bg-light: #f3f4f6;
+            --card-light: #ffffff;
+            --text-dark: #1f2937;
+            --text-gray: #4b5563;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            transition: background-color 0.3s ease;
+        }
+        .scrollable-content {
+            overflow-y: auto;
+            max-height: calc(100vh - 80px); /* Adjust based on header height */
+        }
+        .active-nav {
+            background-color: #e5e7eb;
+            color: var(--text-dark);
+            box-shadow: inset 4px 0 0 0 #2563eb;
+            transition: all 0.2s ease-in-out;
+        }
+        .active-nav:hover {
+            background-color: #d1d5db !important;
+            transform: scale(1.02);
+        }
+        .card {
+            background-color: var(--card-light);
+            border: 1px solid #e5e7eb;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- Header -->
+    <header class="bg-white text-gray-800 shadow-md p-4 sticky top-0 z-50 flex justify-between items-center rounded-b-3xl">
+        <h1 class="text-3xl font-bold tracking-wide">Hybrid Energy Dashboard | <span class="text-blue-600">Harit Yodha</span></h1>
+        <div id="alert-banner" class="fixed top-20 left-1/2 -translate-x-1/2 w-11/12 max-w-sm p-4 rounded-xl shadow-2xl text-center z-[100] hidden transition-all duration-500 transform scale-95 opacity-0">
+            <span id="alert-message" class="font-medium"></span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="demo-mode-toggle" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-full font-semibold hover:bg-gray-300 transition-colors duration-200 shadow-md hover:shadow-lg">
+                <span id="demo-mode-text">Enable Demo Mode</span>
+            </button>
+            <button onclick="changePage('settings')" class="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-hidden p-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 transition-all duration-300">
+            <!-- Sidebar Navigation -->
+            <nav class="md:col-span-1 bg-white p-6 rounded-2xl shadow-lg h-full">
+                <ul class="flex flex-col gap-2">
+                    <li><button onclick="changePage('dashboard')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200 active-nav"><i class="fas fa-home mr-2 text-gray-500"></i>Dashboard</button></li>
+                    <li><button onclick="changePage('forecasting')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200"><i class="fas fa-chart-line mr-2 text-gray-500"></i>Forecasting</button></li>
+                    <li><button onclick="changePage('optimization')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200"><i class="fas fa-brain mr-2 text-gray-500"></i>Optimization</button></li>
+                    <li><button onclick="changePage('reporting')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200"><i class="fas fa-file-alt mr-2 text-gray-500"></i>Reporting</button></li>
+                    <li><button onclick="changePage('analytics')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200"><i class="fas fa-chart-bar mr-2 text-gray-500"></i>Analytics</button></li>
+                    <li><button onclick="changePage('what-if')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200"><i class="fas fa-question-circle mr-2 text-gray-500"></i>What-if Simulator</button></li>
+                    <li><button onclick="changePage('executive-summary')" class="w-full text-left py-3 px-4 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-200"><i class="fas fa-users-cog mr-2 text-gray-500"></i>Executive Summary</button></li>
+                </ul>
+            </nav>
+
+            <!-- Main Content Display -->
+            <div id="content-container" class="md:col-span-3 card p-8 rounded-2xl shadow-lg scrollable-content">
+                <!-- Content will be injected here by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const contentContainer = document.getElementById('content-container');
+        const alertBanner = document.getElementById('alert-banner');
+        const alertMessage = document.getElementById('alert-message');
+        const demoModeToggle = document.getElementById('demo-mode-toggle');
+        const demoModeText = document.getElementById('demo-mode-text');
+
+        let isDemoMode = false;
+        let solarOutput = 0;
+        let windOutput = 0;
+        let batterySOC = 75;
+        let campusLoad = 0;
+        let gridDraw = 0;
+        let totalEnergyUsed = 0;
+        let totalGridReduced = 0;
+        let totalCostSaved = 0;
+        let totalCO2Avoided = 0;
+        let intervalId;
+        const gridTariff = 8; // ₹/kWh
+        const emissionFactor = 0.5; // kg CO₂/kWh
+
+        // --- Core UI Functions ---
+        function showMessage(message, type = 'success') {
+            alertMessage.textContent = message;
+            // Reset classes to prevent stacking
+            alertBanner.className = 'fixed top-20 left-1/2 -translate-x-1/2 w-11/12 max-w-sm p-4 rounded-xl shadow-2xl text-center z-[100] hidden transition-all duration-500 transform scale-95 opacity-0';
+            
+            let bgColor;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-green-600 text-white';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-600 text-white';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-600 text-white';
+                    break;
+                case 'info':
+                    bgColor = 'bg-blue-600 text-white';
+                    break;
+                default:
+                    bgColor = 'bg-gray-600 text-white';
+                    break;
+            }
+            
+            alertBanner.classList.add(...bgColor.split(' '));
+            alertBanner.classList.remove('hidden');
+            setTimeout(() => {
+                alertBanner.classList.remove('scale-95', 'opacity-0');
+                alertBanner.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            setTimeout(() => {
+                alertBanner.classList.remove('scale-100', 'opacity-100');
+                alertBanner.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    alertBanner.classList.add('hidden');
+                }, 500);
+            }, 3000);
+        }
+
+        function changePage(page) {
+            clearInterval(intervalId);
+
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-nav'));
+            
+            const selectedButton = document.querySelector(`button[onclick="changePage('${page}')"]`);
+            if (selectedButton) {
+                selectedButton.classList.add('active-nav');
+            }
+            
+            window.history.pushState(null, '', `#${page}`);
+            switch(page) {
+                case 'dashboard':
+                    renderDashboard();
+                    break;
+                case 'forecasting':
+                    renderForecasting();
+                    break;
+                case 'optimization':
+                    renderOptimization();
+                    break;
+                case 'reporting':
+                    renderReporting();
+                    break;
+                case 'analytics':
+                    renderAnalytics();
+                    break;
+                case 'what-if':
+                    renderWhatIfSimulator();
+                    break;
+                case 'settings':
+                    renderSettings();
+                    break;
+                case 'executive-summary':
+                    renderExecutiveSummary();
+                    break;
+            }
+        }
+
+        // --- Simulated Data & Logic ---
+        function generateDemoData() {
+            solarOutput = Math.max(0, 100 * Math.sin(Date.now() / 100000) + 50 + Math.random() * 20);
+            windOutput = Math.max(0, 80 * Math.sin(Date.now() / 120000) + 40 + Math.random() * 15);
+            campusLoad = 150 + 50 * Math.sin(Date.now() / 80000) + Math.random() * 20;
+
+            let totalGeneration = solarOutput + windOutput;
+            let netEnergy = totalGeneration - campusLoad;
+            
+            if (netEnergy > 0) { // Surplus
+                gridDraw = 0;
+                batterySOC = Math.min(100, batterySOC + netEnergy / 100);
+            } else { // Deficit
+                if (batterySOC > 10) {
+                    let discharge = Math.min(Math.abs(netEnergy), (batterySOC - 10) * 100);
+                    gridDraw = Math.abs(netEnergy) - discharge;
+                    batterySOC -= discharge / 100;
+                } else {
+                    gridDraw = Math.abs(netEnergy);
+                }
+            }
+
+            // Update cumulative metrics
+            totalEnergyUsed += totalGeneration;
+            totalGridReduced += (totalGeneration > 0) ? totalGeneration : 0;
+            totalCostSaved = totalGridReduced * gridTariff;
+            totalCO2Avoided = totalGridReduced * emissionFactor;
+        }
+
+        function getStatusColor(value, min, max) {
+            if (value > max) return 'bg-red-500';
+            if (value < min) return 'bg-orange-500';
+            return 'bg-green-500';
+        }
+
+        function updateDashboard() {
+            if (isDemoMode) {
+                generateDemoData();
+            }
+
+            const solarEl = document.getElementById('solar-output');
+            const windEl = document.getElementById('wind-output');
+            const batteryEl = document.getElementById('battery-soc');
+            const loadEl = document.getElementById('campus-load');
+            const gridEl = document.getElementById('grid-draw');
+            
+            if (solarEl && windEl && batteryEl && loadEl && gridEl) {
+                solarEl.textContent = solarOutput.toFixed(2);
+                windEl.textContent = windOutput.toFixed(2);
+                batteryEl.textContent = batterySOC.toFixed(0);
+                loadEl.textContent = campusLoad.toFixed(2);
+                gridEl.textContent = gridDraw.toFixed(2);
+            } else {
+                clearInterval(intervalId);
+                return;
+            }
+            
+            const batteryIcon = document.getElementById('battery-icon');
+            const gridIcon = document.getElementById('grid-icon');
+            const solarIcon = document.getElementById('solar-icon');
+            const windIcon = document.getElementById('wind-icon');
+            const loadIcon = document.getElementById('load-icon');
+            
+            if (batteryIcon && gridIcon && solarIcon && windIcon && loadIcon) {
+                // Update battery icon color
+                batteryIcon.className = `fas fa-battery-full ${getStatusColor(batterySOC, 20, 95).replace('bg', 'text')}`;
+                
+                // Update grid icon color
+                gridIcon.className = `fas fa-plug ${gridDraw > 50 ? 'text-orange-500' : 'text-green-500'}`;
+
+                // Update solar icon color
+                solarIcon.className = `fas fa-sun ${solarOutput > 10 ? 'text-green-500' : 'text-orange-500'}`;
+
+                // Update wind icon color
+                windIcon.className = `fas fa-wind ${windOutput > 10 ? 'text-green-500' : 'text-orange-500'}`;
+
+                // Update load icon color
+                loadIcon.className = `fas fa-building ${campusLoad > 180 ? 'text-red-500' : 'text-green-500'}`;
+            }
+
+            let alertMsg = '';
+            if (batterySOC < 20) alertMsg = 'Battery SOC is low. Consider reducing load or charging from grid.';
+            else if (batterySOC > 95) alertMsg = 'Battery is overcharged. Consider discharging or exporting to grid.';
+            else if (gridDraw > 50) alertMsg = 'High grid dependency. Increase renewable generation or reduce load.';
+            
+            if (alertMsg) {
+                showMessage(alertMsg, 'warning');
+            }
+        }
+
+        function startSimulation() {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            intervalId = setInterval(updateDashboard, 2000);
+        }
+
+        // --- Page Rendering Functions ---
+        function renderDashboard() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Dashboard Functions</h2>
+                <p class="mb-8 text-gray-600">Real-time monitoring of all campus energy metrics.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Solar Power -->
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col items-start transition-transform duration-300 hover:scale-[1.02]">
+                        <div class="flex items-center gap-2">
+                            <i id="solar-icon" class="fas fa-sun text-yellow-500"></i>
+                            <span class="text-xs font-semibold uppercase text-gray-500">Solar Power</span>
+                        </div>
+                        <span id="solar-output" class="text-5xl font-bold text-gray-800 mt-2">0.00</span>
+                        <span class="text-xl text-gray-600">kW</span>
+                    </div>
+                    <!-- Wind Power -->
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col items-start transition-transform duration-300 hover:scale-[1.02]">
+                        <div class="flex items-center gap-2">
+                            <i id="wind-icon" class="fas fa-wind text-blue-500"></i>
+                            <span class="text-xs font-semibold uppercase text-gray-500">Wind Power</span>
+                        </div>
+                        <span id="wind-output" class="text-5xl font-bold text-gray-800 mt-2">0.00</span>
+                        <span class="text-xl text-gray-600">kW</span>
+                    </div>
+                    <!-- Battery SOC -->
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col items-start transition-transform duration-300 hover:scale-[1.02]">
+                        <div class="flex items-center gap-2">
+                            <i id="battery-icon" class="fas fa-battery-full text-green-500"></i>
+                            <span class="text-xs font-semibold uppercase text-gray-500">Battery SOC</span>
+                        </div>
+                        <span id="battery-soc" class="text-5xl font-bold text-gray-800 mt-2">0</span>
+                        <span class="text-xl text-gray-600">%</span>
+                    </div>
+                    <!-- Campus Load -->
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col items-start transition-transform duration-300 hover:scale-[1.02]">
+                        <div class="flex items-center gap-2">
+                            <i id="load-icon" class="fas fa-building text-gray-500"></i>
+                            <span class="text-xs font-semibold uppercase text-gray-500">Campus Load</span>
+                        </div>
+                        <span id="campus-load" class="text-5xl font-bold text-gray-800 mt-2">0.00</span>
+                        <span class="text-xl text-gray-600">kW</span>
+                    </div>
+                    <!-- Grid Draw -->
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col items-start transition-transform duration-300 hover:scale-[1.02]">
+                        <div class="flex items-center gap-2">
+                            <i id="grid-icon" class="fas fa-plug text-red-500"></i>
+                            <span class="text-xs font-semibold uppercase text-gray-500">Grid Draw / Import</span>
+                        </div>
+                        <span id="grid-draw" class="text-5xl font-bold text-gray-800 mt-2">0.00</span>
+                        <span class="text-xl text-gray-600">kW</span>
+                    </div>
+                </div>
+                <div class="mt-8">
+                    <h3 class="text-2xl font-semibold mb-4 text-gray-800">Alerts & Notifications</h3>
+                    <div class="flex flex-col gap-4">
+                        <div id="critical-alert" class="hidden bg-red-600 border-l-4 border-red-800 text-white p-4 rounded-lg" role="alert">
+                            <p class="font-bold">CRITICAL ALERT</p>
+                            <p>Battery Overcharge detected! Immediate action required to prevent damage.</p>
+                        </div>
+                        <div id="warning-alert" class="hidden bg-yellow-600 border-l-4 border-yellow-800 text-white p-4 rounded-lg" role="alert">
+                            <p class="font-bold">WARNING</p>
+                            <p>Grid dependency is high. Check for load spikes or low renewable generation.</p>
+                        </div>
+                        <div id="info-alert" class="bg-green-600 border-l-4 border-green-800 text-white p-4 rounded-lg" role="alert">
+                            <p class="font-bold">SYSTEM OK</p>
+                            <p>All systems are operating within optimal parameters.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => {
+                if (isDemoMode) {
+                    startSimulation();
+                }
+            }, 50);
+        }
+
+        function renderForecasting() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Forecasting Functions</h2>
+                <p class="mb-8 text-gray-600">Short-term forecast for the next 24 hours.</p>
+                <div class="card p-6 rounded-2xl shadow-lg">
+                    <canvas id="forecastChart" class="w-full"></canvas>
+                </div>
+                <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-green-700 p-4 rounded-xl flex-1 text-center font-medium text-white shadow-sm">
+                        <p class="text-lg font-semibold">Surplus Periods</p>
+                        <p>11:00 AM - 3:00 PM</p>
+                    </div>
+                    <div class="bg-yellow-700 p-4 rounded-xl flex-1 text-center font-medium text-white shadow-sm">
+                        <p class="text-lg font-semibold">Deficit Periods</p>
+                        <p>5:00 AM - 7:00 AM, 6:00 PM - 10:00 PM</p>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Simulate Scenarios</h3>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <button onclick="simulateScenario('sunny')" class="bg-yellow-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-yellow-700 transition-colors duration-200 shadow-lg"><i class="fas fa-sun mr-2"></i>Sunny Day</button>
+                        <button onclick="simulateScenario('cloudy')" class="bg-gray-600 text-gray-200 px-6 py-3 rounded-full font-semibold hover:bg-gray-700 transition-colors duration-200 shadow-lg"><i class="fas fa-cloud-sun mr-2"></i>Cloudy Day</button>
+                        <button onclick="simulateScenario('windy')" class="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-lg"><i class="fas fa-wind mr-2"></i>Windy Day</button>
+                    </div>
+                </div>
+            `;
+            renderForecastChart();
+        }
+
+        function renderForecastChart(scenario = 'sunny') {
+            const labels = Array.from({length: 24}, (_, i) => `${i}:00`);
+            const solarData = [];
+            const windData = [];
+            const campusData = [];
+
+            for (let i = 0; i < 24; i++) {
+                let solarBase = 50 * Math.sin(Math.PI * (i - 8) / 12);
+                let windBase = 40 * Math.sin(Math.PI * (i - 12) / 12);
+                let campusBase = 150 + 50 * Math.sin(Math.PI * (i - 12) / 12);
+                
+                if (scenario === 'cloudy') {
+                    solarBase *= 0.4;
+                } else if (scenario === 'windy') {
+                    windBase *= 1.5;
+                }
+                
+                solarData.push(Math.max(0, solarBase));
+                windData.push(Math.max(0, windBase));
+                campusData.push(Math.max(0, campusBase));
+            }
+
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            if (window.myChart) {
+                window.myChart.destroy();
+            }
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Solar Generation (kW)',
+                            data: solarData,
+                            borderColor: '#eab308',
+                            backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Wind Generation (kW)',
+                            data: windData,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Campus Load (kW)',
+                            data: campusData,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: 'var(--text-dark)'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '24-Hour Energy Forecast',
+                            color: 'var(--text-dark)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Power (kW)',
+                                color: 'var(--text-dark)'
+                            },
+                            ticks: { color: 'var(--text-dark)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: 'var(--text-dark)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function simulateScenario(scenario) {
+            renderForecastChart(scenario);
+            showMessage(`Forecast updated for a ${scenario} scenario.`);
+        }
+
+        function renderOptimization() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Optimization / Scheduler</h2>
+                <p class="mb-8 text-gray-600">Optimal schedule recommendations to maximize efficiency and savings.</p>
+                <div class="card p-6 rounded-2xl border-l-4 border-green-500 mb-6 shadow-lg">
+                    <h3 class="text-xl font-semibold text-green-700">Optimal Schedule Recommendations</h3>
+                    <ul class="list-disc list-inside mt-3 text-gray-700">
+                        <li><strong>Battery Charge:</strong> 11:00 AM - 3:00 PM (Surplus Solar)</li>
+                        <li><strong>Battery Discharge:</strong> 6:00 PM - 10:00 PM (Peak load)</li>
+                        <li><strong>Load-shifting:</strong> Shift HVAC pre-cooling to 9:00 AM</li>
+                        <li><strong>Grid Export:</strong> 1:00 PM - 2:00 PM (High surplus)</li>
+                    </ul>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button id="apply-schedule-btn" class="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-lg">
+                        <i class="fas fa-check-circle mr-2"></i>Apply Optimal Schedule
+                    </button>
+                    <button onclick="showMessage('Manual override engaged. System is now under manual control.', 'info')" class="bg-gray-600 text-gray-200 px-6 py-3 rounded-full font-semibold hover:bg-gray-700 transition-colors duration-200 shadow-md">
+                        <i class="fas fa-hand-paper mr-2"></i>Manual Override
+                    </button>
+                </div>
+            `;
+            document.getElementById('apply-schedule-btn').addEventListener('click', () => {
+                showMessage('Optimal schedule applied successfully!', 'success');
+            });
+        }
+
+        function renderReporting() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Reporting Functions</h2>
+                <p class="mb-8 text-gray-600">Generate and download reports on key energy metrics.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col transition-transform duration-300 hover:scale-[1.02]">
+                        <i class="fas fa-solar-panel text-blue-600 text-2xl mb-2"></i>
+                        <span class="text-sm font-semibold uppercase text-gray-500">Renewable Used</span>
+                        <span class="text-3xl font-bold text-gray-800 block mt-1">${totalEnergyUsed.toFixed(0)} kWh</span>
+                    </div>
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col transition-transform duration-300 hover:scale-[1.02]">
+                        <i class="fas fa-plug text-red-600 text-2xl mb-2"></i>
+                        <span class="text-sm font-semibold uppercase text-gray-500">Grid Reduced</span>
+                        <span class="text-3xl font-bold text-gray-800 block mt-1">${totalGridReduced.toFixed(0)} kWh</span>
+                    </div>
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col transition-transform duration-300 hover:scale-[1.02]">
+                        <i class="fas fa-rupee-sign text-green-600 text-2xl mb-2"></i>
+                        <span class="text-sm font-semibold uppercase text-gray-500">Cost Saved</span>
+                        <span class="text-3xl font-bold text-gray-800 block mt-1">₹${totalCostSaved.toFixed(2)}</span>
+                    </div>
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col transition-transform duration-300 hover:scale-[1.02]">
+                        <i class="fas fa-leaf text-lime-600 text-2xl mb-2"></i>
+                        <span class="text-sm font-semibold uppercase text-gray-500">CO₂ Avoided</span>
+                        <span class="text-3xl font-bold text-gray-800 block mt-1">${totalCO2Avoided.toFixed(2)} kg</span>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="downloadReport('pdf')" class="bg-red-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-red-700 transition-colors duration-200 shadow-lg">
+                        <i class="fas fa-file-pdf mr-2"></i>Download PDF Report
+                    </button>
+                    <button onclick="downloadReport('csv')" class="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-lg">
+                        <i class="fas fa-file-csv mr-2"></i>Download CSV Report
+                    </button>
+                </div>
+            `;
+        }
+        
+        function downloadReport(format) {
+            showMessage(`Downloading daily report in ${format.toUpperCase()} format...`, 'success');
+        }
+
+        function renderAnalytics() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Analytics & Insights</h2>
+                <p class="mb-8 text-gray-600">Deeper insights into historical usage and performance.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-xl font-semibold mb-2 text-gray-800">Self-Consumption Percentage</h3>
+                        <canvas id="consumptionChart"></canvas>
+                        <p class="text-center text-3xl font-bold mt-4 text-gray-800">85%</p>
+                    </div>
+                    <div class="card p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-xl font-semibold mb-2 text-gray-800">Historical Usage (Last 7 Days)</h3>
+                        <canvas id="historicalChart"></canvas>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-2xl font-semibold mb-4 text-gray-800">Carbon-Saving Insights</h3>
+                    <p class="text-gray-600">The total CO₂ emissions avoided is equivalent to planting <strong class="text-gray-800">${(totalCO2Avoided / 10).toFixed(0)} trees</strong>!</p>
+                </div>
+            `;
+            renderAnalyticsCharts();
+        }
+
+        function renderAnalyticsCharts() {
+            const consumptionCtx = document.getElementById('consumptionChart').getContext('2d');
+            new Chart(consumptionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Self-Consumption', 'Grid'],
+                    datasets: [{
+                        data: [85, 15],
+                        backgroundColor: ['#10b981', '#6b7280'], // A better green and a darker gray for visibility
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'var(--text-dark)' }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Self-Consumption vs. Grid',
+                            color: 'var(--text-dark)'
+                        }
+                    }
+                }
+            });
+
+            const historicalCtx = document.getElementById('historicalChart').getContext('2d');
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const solarHistory = [200, 220, 190, 250, 230, 210, 240];
+            const windHistory = [150, 160, 140, 180, 170, 155, 165];
+            const loadHistory = [300, 320, 310, 350, 330, 315, 340];
+
+            new Chart(historicalCtx, {
+                type: 'bar',
+                data: {
+                    labels: days,
+                    datasets: [
+                        { label: 'Solar', data: solarHistory, backgroundColor: '#f59e0b' }, // Vibrant amber
+                        { label: 'Wind', data: windHistory, backgroundColor: '#3b82f6' }, // Stronger blue
+                        { label: 'Load', data: loadHistory, backgroundColor: '#ef4444' } // Bold red
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: 'var(--text-dark)' } },
+                        title: { display: true, text: 'Historical Energy Data', color: 'var(--text-dark)' }
+                    },
+                    scales: { 
+                        x: { 
+                            stacked: true, 
+                            ticks: { color: 'var(--text-dark)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' } 
+                        },
+                        y: { 
+                            stacked: true, 
+                            beginAtZero: true,
+                            ticks: { color: 'var(--text-dark)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' } 
+                        } 
+                    }
+                }
+            });
+        }
+
+        function renderWhatIfSimulator() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">What-if Scenario Simulator</h2>
+                <p class="mb-8 text-gray-600">Simulate the impact of adding new assets to your campus.</p>
+                <div class="card p-8 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Add a new Battery</h3>
+                    <p class="text-gray-600 mb-4">Enter the capacity of the new battery in kWh:</p>
+                    <div class="flex flex-col gap-4">
+                        <input type="number" id="battery-capacity" value="500" class="w-full p-3 border border-gray-300 bg-gray-100 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="simulate-btn" class="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-lg">
+                            <i class="fas fa-play mr-2"></i>Run Simulation
+                        </button>
+                    </div>
+                </div>
+                <div id="simulation-results" class="hidden mt-8 card p-8 rounded-2xl shadow-lg">
+                    <h3 class="text-2xl font-semibold mb-4 text-gray-800">Simulation Results</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="bg-green-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">Extra Energy Saved</p>
+                            <p id="energy-saved" class="text-3xl font-bold mt-1 text-white">0 kWh</p>
+                        </div>
+                        <div class="bg-blue-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">Extra Cost Saved</p>
+                            <p id="cost-saved" class="text-3xl font-bold mt-1 text-white">₹0</p>
+                        </div>
+                        <div class="bg-yellow-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">CO₂ Avoided</p>
+                            <p id="co2-avoided" class="text-3xl font-bold mt-1 text-white">0 kg</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('simulate-btn').addEventListener('click', () => {
+                const newCapacity = document.getElementById('battery-capacity').value;
+                if (newCapacity <= 0) {
+                    showMessage('Please enter a valid battery capacity.', 'error');
+                    return;
+                }
+                const extraEnergy = newCapacity * 0.8; // 80% efficiency
+                const extraCost = extraEnergy * gridTariff;
+                const extraCO2 = extraEnergy * emissionFactor;
+                document.getElementById('energy-saved').textContent = `${extraEnergy.toFixed(0)} kWh`;
+                document.getElementById('cost-saved').textContent = `₹${extraCost.toFixed(2)}`;
+                document.getElementById('co2-avoided').textContent = `${extraCO2.toFixed(2)} kg`;
+                document.getElementById('simulation-results').classList.remove('hidden');
+                showMessage('Simulation completed successfully!', 'success');
+            });
+        }
+        
+        function renderSettings() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Settings & Configuration</h2>
+                <p class="mb-8 text-gray-600">Configure system parameters and assets.</p>
+                <div class="card p-8 rounded-2xl shadow-lg flex flex-col gap-6">
+                    <h3 class="text-xl font-semibold text-gray-800">Grid Tariffs & Emissions</h3>
+                    <div class="flex flex-col gap-2">
+                        <label for="grid-tariff" class="text-gray-600">Grid Tariff (₹/kWh)</label>
+                        <input type="number" id="grid-tariff" value="8.0" class="w-full p-3 border border-gray-300 bg-gray-100 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label for="emission-factor" class="text-gray-600">CO₂ Emission Factor (kg/kWh)</label>
+                        <input type="number" id="emission-factor" value="0.5" class="w-full p-3 border border-gray-300 bg-gray-100 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <h3 class="text-xl font-semibold mt-4 text-gray-800">Alert Thresholds</h3>
+                    <div class="flex items-center gap-4">
+                        <label for="soc-min" class="text-gray-600">Min. Battery SOC:</label>
+                        <input type="range" id="soc-min" min="0" max="100" value="20" class="flex-1">
+                        <span id="soc-min-value" class="w-12 text-center text-gray-800">20%</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label for="soc-max" class="text-gray-600">Max. Battery SOC:</label>
+                        <input type="range" id="soc-max" min="0" max="100" value="95" class="flex-1">
+                        <span id="soc-max-value" class="w-12 text-center text-gray-800">95%</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mt-4 text-gray-800">Assets</h3>
+                    <p class="text-gray-600">Simulated assets can be configured here.</p>
+                    <button onclick="showMessage('New asset added successfully!', 'success')" class="bg-green-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors duration-200 shadow-lg">
+                        <i class="fas fa-plus-circle mr-2"></i>Add New Asset
+                    </button>
+                </div>
+            `;
+            const socMinValue = document.getElementById('soc-min-value');
+            const socMinInput = document.getElementById('soc-min');
+            socMinInput.addEventListener('input', () => {
+                socMinValue.textContent = `${socMinInput.value}%`;
+            });
+            const socMaxValue = document.getElementById('soc-max-value');
+            const socMaxInput = document.getElementById('soc-max');
+            socMaxInput.addEventListener('input', () => {
+                socMaxValue.textContent = `${socMaxInput.value}%`;
+            });
+        }
+        
+        function renderExecutiveSummary() {
+            contentContainer.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Executive Summary</h2>
+                <p class="mb-8 text-gray-600">A high-level overview for management and stakeholders.</p>
+                <div class="card p-8 rounded-2xl shadow-lg">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Key Performance Indicators</h3>
+                    <p class="text-gray-600 leading-relaxed mb-6">
+                        Our hybrid renewable energy solution has successfully leveraged solar and wind generation to meet a significant portion of the campus's energy needs. By utilizing smart scheduling and battery storage, we've achieved a remarkable reduction in grid dependency and operational costs. The system's proactive alerting and forecasting capabilities ensure maximum uptime and efficiency.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-blue-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">Total Renewable Energy Generated</p>
+                            <p class="text-2xl font-bold mt-1 text-white">${totalEnergyUsed.toFixed(0)} kWh</p>
+                        </div>
+                        <div class="bg-green-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">Total Grid Energy Saved</p>
+                            <p class="text-2xl font-bold mt-1 text-white">${totalGridReduced.toFixed(0)} kWh</p>
+                        </div>
+                        <div class="bg-yellow-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">Total Cost Savings</p>
+                            <p class="text-2xl font-bold mt-1 text-white">₹${totalCostSaved.toFixed(2)}</p>
+                        </div>
+                        <div class="bg-red-600 p-4 rounded-xl text-center shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-200">CO₂ Emissions Avoided</p>
+                            <p class="text-2xl font-bold mt-1 text-white">${totalCO2Avoided.toFixed(2)} kg</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 mt-4">
+                        <button onclick="downloadReport('executive-summary')" class="bg-gray-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-700 transition-colors duration-200 shadow-lg">
+                            <i class="fas fa-file-export mr-2"></i>Export Summary
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Toggle Demo Mode
+        demoModeToggle.addEventListener('click', () => {
+            isDemoMode = !isDemoMode;
+            if (isDemoMode) {
+                demoModeText.textContent = 'Disable Demo Mode';
+                const currentHash = window.location.hash.substring(1) || 'dashboard';
+                if (currentHash === 'dashboard') {
+                    startSimulation();
+                }
+                showMessage('Demo Mode Enabled. Data is now simulated.', 'info');
+            } else {
+                demoModeText.textContent = 'Enable Demo Mode';
+                clearInterval(intervalId);
+                showMessage('Demo Mode Disabled. Data updates have stopped.', 'info');
+            }
+        });
+
+        window.onload = function() {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                changePage(hash);
+            } else {
+                changePage('dashboard');
+            }
+        }
+        
+    </script>
+</body>
+</html>
